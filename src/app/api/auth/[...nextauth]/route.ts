@@ -47,6 +47,6 @@ export const GET = async () => {
       { id: "item2", name: "Product 2", quantity: 1, price: 200 },
     ],
   }; 
-
+ 
   return NextResponse.json(mockData);
 };
