@@ -1,47 +1,38 @@
 import { prismaClient } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
 
 export const POST = async (request: Request) => {
-  const signature = request.headers.get("stripe-signature");
+  try {
+    const body = await request.json();
 
-  if (!signature) {
-    return NextResponse.error();
+    // Simular validação de evento do webhook
+    const event = {
+      type: body.type || "checkout.session.completed",
+      data: body.data || { object: {} },
+    };
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as any;
+
+      // Aqui você pode simular a recuperação dos itens do pedido
+      const sessionWithLineItems = {
+        line_items: session.line_items || [],
+      };
+
+      // ATUALIZAR PEDIDO
+      await prismaClient.order.update({
+        where: {
+          id: session.metadata.orderId, // Certifique-se de que o ID do pedido está disponível
+        },
+        data: {
+          status: "PAYMENT_CONFIRMED", // Atualiza o status do pedido
+        },
+      });
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error("Erro ao processar o webhook:", error);
+    return NextResponse.json({ error: "Failed to process webhook" }, { status: 400 });
   }
-
-  const text = await request.text();
-
-  const event = stripe.webhooks.constructEvent(
-    text,
-    signature,
-    process.env.STRIPE_WEBHOOK_SECRET_KEY,
-  );
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
-
-    const sessionWithLineItems = await stripe.checkout.sessions.retrieve(
-      event.data.object.id,
-      {
-        expand: ["line_items"],
-      },
-    );
-    const lineItems = sessionWithLineItems.line_items;
-
-    // ATUALIZAR PEDIDO
-    await prismaClient.order.update({
-      where: {
-        id: session.metadata.orderId,
-      },
-      data: {
-        status: "PAYMENT_CONFIRMED",
-      },
-    });
-  }
-
-  return NextResponse.json({ received: true });
 };
