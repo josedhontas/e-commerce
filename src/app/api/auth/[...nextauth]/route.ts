@@ -36,3 +36,17 @@ export const POST = async (request: Request) => {
     return NextResponse.json({ error: "Failed to process webhook" }, { status: 400 });
   }
 };
+
+export const GET = async () => {
+  // Mock data
+  const mockData = {
+    id: "12345",
+    status: "PAYMENT_CONFIRMED",
+    items: [
+      { id: "item1", name: "Product 1", quantity: 2, price: 100 },
+      { id: "item2", name: "Product 2", quantity: 1, price: 200 },
+    ],
+  };
+
+  return NextResponse.json(mockData);
+};
